@@ -1,16 +1,8 @@
-import fs from "fs";
-import { parse } from "csv-parse";
-import { stringify } from "csv-stringify/sync";
 import { DiaryEntry } from "../types/letterboxd";
-
+declare var Papa: any
 class LetterboxdData {
     diary: DiaryEntry[] = [];
     private constructor() {}
-    static async init(): Promise<LetterboxdData> {
-        const instance: LetterboxdData = new LetterboxdData();
-        instance.diary = await instance.readDiaryFromDataFolder();
-        return instance;
-    }
 
     static initFromDiaryArray(diaryEntryArray: DiaryEntry[]) {
         const instance = new LetterboxdData();
@@ -25,31 +17,32 @@ class LetterboxdData {
     }
 
     private async readDiary(csvString: string): Promise<DiaryEntry[]> {
-        const parser = parse(csvString, {
-            columns: true,
-            skip_empty_lines: true,
-            trim: true,
-        });
+   
         const diaryEntries: DiaryEntry[] = [];
-        for await (const row of parser) {
-            const entry: DiaryEntry = {
-                date: row["Date"],
-                name: row["Name"],
-                year: Number(row["Year"]),
-                uri: row["Letterboxd URI"],
-                rating: Number(row["Rating"]),
-                rewatch: Boolean(row["Rewatch"]),
-                tags: row["Tags"],
-                watchedDate: row["Watched Date"],
-            };
-            diaryEntries.push(entry);
-        }
+        // Parse the CSV string using PapaParse
+        Papa.parse(csvString, {
+            header: true, // Use the first row as column names
+            skipEmptyLines: true, // Skip empty lines
+            dynamicTyping: true, // Automatically convert types (e.g., "true" becomes a boolean)
+            complete: function (result: Papa.ParseResult<string>) {
+                // Process each row
+                result.data.forEach((row: any) => {
+                    const entry: DiaryEntry = {
+                        date: row["Date"],
+                        name: row["Name"],
+                        year: row["Year"],
+                        uri: row["Letterboxd URI"],
+                        rating: row["Rating"],
+                        rewatch: row["Rewatch"], // PapaParse automatically converts true/false string to boolean
+                        tags: row["Tags"],
+                        watchedDate: row["Watched Date"],
+                    };
+                    diaryEntries.push(entry);
+                });
+            },
+        });
+
         return diaryEntries;
-    }
-    private async readDiaryFromDataFolder(): Promise<DiaryEntry[]> {
-        const filePath = "data/diary.csv";
-        const fileString = fs.readFileSync(filePath, "utf-8");
-        return this.readDiary(fileString);
     }
 
     async filterByWatchedDate(
@@ -80,18 +73,11 @@ class LetterboxdData {
     }
 
     getDiaryAsLetterboxdListString(): string {
-        const listContent: string = stringify(this.diary, {
+        const listContent: string = Papa.unparse(this.diary, {
             header: true,
-            columns: [
-                { key: "uri", header: "Letterboxd URI" },
-                { key: "name", header: "Title" },
-            ],
+            columns: ["uri", "name"],
         });
         return listContent;
-    }
-    async writeDiaryAsLetterboxdList(listName: string) {
-        const listContent = this.getDiaryAsLetterboxdListString();
-        fs.writeFileSync(`out/${listName}.csv`, listContent);
     }
 
     sortDiaryByRating(descending: boolean) {

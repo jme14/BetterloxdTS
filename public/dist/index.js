@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,30 +7,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __asyncValues = (this && this.__asyncValues) || function (o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator], i;
-    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const fs_1 = __importDefault(require("fs"));
-const csv_parse_1 = require("csv-parse");
-const sync_1 = require("csv-stringify/sync");
 class LetterboxdData {
     constructor() {
         this.diary = [];
-    }
-    static init() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const instance = new LetterboxdData();
-            instance.diary = yield instance.readDiaryFromDataFolder();
-            return instance;
-        });
     }
     static initFromDiaryArray(diaryEntryArray) {
         const instance = new LetterboxdData();
@@ -47,46 +25,30 @@ class LetterboxdData {
     }
     readDiary(csvString) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, e_1, _b, _c;
-            const parser = (0, csv_parse_1.parse)(csvString, {
-                columns: true,
-                skip_empty_lines: true,
-                trim: true,
-            });
             const diaryEntries = [];
-            try {
-                for (var _d = true, parser_1 = __asyncValues(parser), parser_1_1; parser_1_1 = yield parser_1.next(), _a = parser_1_1.done, !_a; _d = true) {
-                    _c = parser_1_1.value;
-                    _d = false;
-                    const row = _c;
-                    const entry = {
-                        date: row["Date"],
-                        name: row["Name"],
-                        year: Number(row["Year"]),
-                        uri: row["Letterboxd URI"],
-                        rating: Number(row["Rating"]),
-                        rewatch: Boolean(row["Rewatch"]),
-                        tags: row["Tags"],
-                        watchedDate: row["Watched Date"],
-                    };
-                    diaryEntries.push(entry);
-                }
-            }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = parser_1.return)) yield _b.call(parser_1);
-                }
-                finally { if (e_1) throw e_1.error; }
-            }
+            // Parse the CSV string using PapaParse
+            Papa.parse(csvString, {
+                header: true, // Use the first row as column names
+                skipEmptyLines: true, // Skip empty lines
+                dynamicTyping: true, // Automatically convert types (e.g., "true" becomes a boolean)
+                complete: function (result) {
+                    // Process each row
+                    result.data.forEach((row) => {
+                        const entry = {
+                            date: row["Date"],
+                            name: row["Name"],
+                            year: row["Year"],
+                            uri: row["Letterboxd URI"],
+                            rating: row["Rating"],
+                            rewatch: row["Rewatch"], // PapaParse automatically converts true/false string to boolean
+                            tags: row["Tags"],
+                            watchedDate: row["Watched Date"],
+                        };
+                        diaryEntries.push(entry);
+                    });
+                },
+            });
             return diaryEntries;
-        });
-    }
-    readDiaryFromDataFolder() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const filePath = "data/diary.csv";
-            const fileString = fs_1.default.readFileSync(filePath, "utf-8");
-            return this.readDiary(fileString);
         });
     }
     filterByWatchedDate(yearFilter, monthFilter, dayFilter) {
@@ -112,20 +74,11 @@ class LetterboxdData {
         });
     }
     getDiaryAsLetterboxdListString() {
-        const listContent = (0, sync_1.stringify)(this.diary, {
+        const listContent = Papa.unparse(this.diary, {
             header: true,
-            columns: [
-                { key: "uri", header: "Letterboxd URI" },
-                { key: "name", header: "Title" },
-            ],
+            columns: ["uri", "name"],
         });
         return listContent;
-    }
-    writeDiaryAsLetterboxdList(listName) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const listContent = this.getDiaryAsLetterboxdListString();
-            fs_1.default.writeFileSync(`out/${listName}.csv`, listContent);
-        });
     }
     sortDiaryByRating(descending) {
         var returner = 1;
@@ -203,4 +156,4 @@ processButton.addEventListener("click", () => {
         output.textContent = "No file selected.";
     }
 });
-//# sourceMappingURL=index.js.map
+export {};
