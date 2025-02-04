@@ -6,29 +6,30 @@ import { DiaryEntry } from "../types/letterboxd";
 class LetterboxdData {
     diary: DiaryEntry[] = [];
     private constructor() {}
-    static async init(diaryEntryArray?: DiaryEntry[]): Promise<LetterboxdData> {
-        if (diaryEntryArray) {
-            const instance = new LetterboxdData();
-            instance.diary = diaryEntryArray;
-            return instance;
-        }
-
+    static async init(): Promise<LetterboxdData> {
         const instance: LetterboxdData = new LetterboxdData();
-        instance.diary = await instance.readDiary();
+        instance.diary = await instance.readDiaryFromDataFolder();
         return instance;
     }
-    private async readDiary(): Promise<DiaryEntry[]> {
-        const filePath = "data/diary.csv";
-        const fileStream = fs.createReadStream(filePath);
 
-        const parser = fileStream.pipe(
-            parse({
-                columns: true, // Convert rows into objects using headers
-                skip_empty_lines: true,
-                trim: true, // Remove spaces around values
-            })
-        );
+    static initFromDiaryArray(diaryEntryArray: DiaryEntry[]) {
+        const instance = new LetterboxdData();
+        instance.diary = diaryEntryArray;
+        return instance;
+    }
 
+    static async initFromString(csvString: string): Promise<LetterboxdData> {
+        const instance = new LetterboxdData();
+        instance.diary = await instance.readDiary(csvString);
+        return instance;
+    }
+
+    private async readDiary(csvString: string): Promise<DiaryEntry[]> {
+        const parser = parse(csvString, {
+            columns: true,
+            skip_empty_lines: true,
+            trim: true,
+        });
         const diaryEntries: DiaryEntry[] = [];
         for await (const row of parser) {
             const entry: DiaryEntry = {
@@ -45,6 +46,11 @@ class LetterboxdData {
         }
         return diaryEntries;
     }
+    private async readDiaryFromDataFolder(): Promise<DiaryEntry[]> {
+        const filePath = "data/diary.csv";
+        const fileString = fs.readFileSync(filePath, "utf-8");
+        return this.readDiary(fileString);
+    }
 
     async filterByWatchedDate(
         yearFilter: number,
@@ -59,7 +65,8 @@ class LetterboxdData {
             const watchedYear = watchedDate.getUTCFullYear();
             return watchedYear == yearFilter;
         });
-        const filteredLetterboxdData = await LetterboxdData.init(filteredDiary);
+        const filteredLetterboxdData =
+            LetterboxdData.initFromDiaryArray(filteredDiary);
         return filteredLetterboxdData;
     }
     async filterByRewatch(rewatch: boolean): Promise<LetterboxdData> {
@@ -67,11 +74,12 @@ class LetterboxdData {
         const filteredDiary = diary.filter((entry) => {
             return entry.rewatch == rewatch;
         });
-        const filteredLetterboxdData = await LetterboxdData.init(filteredDiary);
+        const filteredLetterboxdData =
+            LetterboxdData.initFromDiaryArray(filteredDiary);
         return filteredLetterboxdData;
     }
 
-    async writeDiaryAsLetterboxdList(listName: string) {
+    getDiaryAsLetterboxdListString(): string {
         const listContent: string = stringify(this.diary, {
             header: true,
             columns: [
@@ -79,7 +87,10 @@ class LetterboxdData {
                 { key: "name", header: "Title" },
             ],
         });
-
+        return listContent;
+    }
+    async writeDiaryAsLetterboxdList(listName: string) {
+        const listContent = this.getDiaryAsLetterboxdListString();
         fs.writeFileSync(`out/${listName}.csv`, listContent);
     }
 
@@ -104,14 +115,67 @@ class LetterboxdData {
     }
 }
 
-async function getLetterboxdData() {
-    const lbData = await LetterboxdData.init();
+async function getLetterboxdDataForYearFirstWatches(lbData: LetterboxdData) {
+    // const lbData = await LetterboxdData.init();
     // console.log(lbData.diary)
     const filteredByDate = await lbData.filterByWatchedDate(2024);
     const filteredLBData = await filteredByDate.filterByRewatch(false);
     filteredLBData.sortDiaryByRating(true);
 
-    filteredLBData.writeDiaryAsLetterboxdList("2024 First Watches Ranked");
+    //filteredLBData.writeDiaryAsLetterboxdList("2024 First Watches Ranked");
+    return filteredLBData;
 }
 
-getLetterboxdData();
+// getLetterboxdData();
+
+// Function to trigger a file download
+function downloadFile(content: string, filename: string, mimeType: string) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+
+    // Create a temporary anchor element to trigger the download
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // Release the object URL
+    URL.revokeObjectURL(url);
+}
+
+// Get references to the DOM elements
+const fileInput = document.getElementById("fileInput") as HTMLInputElement;
+const processButton = document.getElementById(
+    "processButton"
+) as HTMLButtonElement;
+const output = document.getElementById("output") as HTMLParagraphElement;
+
+// Add an event listener to the button
+processButton.addEventListener("click", () => {
+    // Check if a file is selected
+    if (fileInput.files && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        output.textContent = `Selected file: ${file.name}`;
+
+        // Read the file content
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const fileContent = event.target?.result as string;
+            console.log("File content:", fileContent);
+
+            const lbDataPromise = LetterboxdData.initFromString(fileContent);
+            lbDataPromise.then(async (lbData) => {
+                const betterLBData = await getLetterboxdDataForYearFirstWatches(
+                    lbData
+                );
+                const lbList = betterLBData.getDiaryAsLetterboxdListString();
+                downloadFile(lbList, "Your List.csv", "text/csv")
+            });
+        };
+        reader.readAsText(file);
+    } else {
+        output.textContent = "No file selected.";
+    }
+});
