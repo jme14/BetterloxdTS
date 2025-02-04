@@ -33,7 +33,7 @@ class LetterboxdData {
                         year: row["Year"],
                         uri: row["Letterboxd URI"],
                         rating: row["Rating"],
-                        rewatch: row["Rewatch"], // PapaParse automatically converts true/false string to boolean
+                        rewatch: row["Rewatch"] || false, // PapaParse automatically converts true/false string to boolean
                         tags: row["Tags"],
                         watchedDate: row["Watched Date"],
                     };
@@ -75,7 +75,6 @@ class LetterboxdData {
     getDiaryAsLetterboxdListString(): string {
         const listContent: string = Papa.unparse(this.diary, {
             header: true,
-            columns: ["uri", "name"],
         });
         return listContent;
     }
@@ -149,16 +148,18 @@ processButton.addEventListener("click", () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             const fileContent = event.target?.result as string;
-            console.log("File content:", fileContent);
+            // console.log("File content:", fileContent);
 
             const lbDataPromise = LetterboxdData.initFromString(fileContent);
             lbDataPromise.then(async (lbData) => {
+                console.log(lbData)
                 const betterLBData = await getLetterboxdDataForYearFirstWatches(
                     lbData
                 );
                 const lbList = betterLBData.getDiaryAsLetterboxdListString();
+                console.log(lbList)
                 downloadFile(lbList, "Your List.csv", "text/csv")
-            });
+            })
         };
         reader.readAsText(file);
     } else {
