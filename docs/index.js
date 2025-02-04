@@ -126,6 +126,29 @@ function downloadFile(content, filename, mimeType) {
     // Release the object URL
     URL.revokeObjectURL(url);
 }
+document.addEventListener("DOMContentLoaded", () => {
+    const listTypeInputs = document.querySelectorAll('input[name="listType"]');
+    const yearInput = document.getElementById("yearInput");
+    const nInput = document.getElementById("nInput");
+    // Function to switch between yearInput and nInput dynamically
+    function updateInputVisibility() {
+        const selectedType = document.querySelector('input[name="listType"]:checked').value;
+        if (selectedType === "yearEnd") {
+            yearInput.style.display = "block"; // Change to flex for better styling
+            nInput.style.display = "none";
+        }
+        else {
+            yearInput.style.display = "none";
+            nInput.style.display = "block";
+        }
+    }
+    // Attach event listeners to radio buttons
+    listTypeInputs.forEach((input) => {
+        input.addEventListener("change", updateInputVisibility);
+    });
+    // Run the function once to ensure correct initial state
+    updateInputVisibility();
+});
 // Get references to the DOM elements
 const fileInput = document.getElementById("fileInput");
 const processButton = document.getElementById("processButton");

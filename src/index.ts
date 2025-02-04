@@ -1,5 +1,5 @@
 import { DiaryEntry } from "../types/letterboxd";
-declare var Papa: any
+declare var Papa: typeof import("papaparse");
 class LetterboxdData {
     diary: DiaryEntry[] = [];
     private constructor() {}
@@ -17,7 +17,6 @@ class LetterboxdData {
     }
 
     private async readDiary(csvString: string): Promise<DiaryEntry[]> {
-   
         const diaryEntries: DiaryEntry[] = [];
         // Parse the CSV string using PapaParse
         Papa.parse(csvString, {
@@ -130,6 +129,39 @@ function downloadFile(content: string, filename: string, mimeType: string) {
     URL.revokeObjectURL(url);
 }
 
+
+document.addEventListener("DOMContentLoaded", () => {
+    const listTypeInputs = document.querySelectorAll<HTMLInputElement>(
+        'input[name="listType"]'
+    );
+    const yearInput = document.getElementById("yearInput") as HTMLDivElement;
+    const nInput = document.getElementById("nInput") as HTMLDivElement;
+
+    // Function to switch between yearInput and nInput dynamically
+    function updateInputVisibility() {
+        const selectedType = document.querySelector<HTMLInputElement>(
+            'input[name="listType"]:checked'
+        )!.value;
+
+        if (selectedType === "yearEnd") {
+            yearInput.style.display = "block"; // Change to flex for better styling
+            nInput.style.display = "none";
+        } else {
+            yearInput.style.display = "none";
+            nInput.style.display = "block";
+        }
+    }
+
+    // Attach event listeners to radio buttons
+    listTypeInputs.forEach((input) => {
+        input.addEventListener("change", updateInputVisibility);
+    });
+
+    // Run the function once to ensure correct initial state
+    updateInputVisibility();
+});
+
+
 // Get references to the DOM elements
 const fileInput = document.getElementById("fileInput") as HTMLInputElement;
 const processButton = document.getElementById(
@@ -152,14 +184,14 @@ processButton.addEventListener("click", () => {
 
             const lbDataPromise = LetterboxdData.initFromString(fileContent);
             lbDataPromise.then(async (lbData) => {
-                console.log(lbData)
+                console.log(lbData);
                 const betterLBData = await getLetterboxdDataForYearFirstWatches(
                     lbData
                 );
                 const lbList = betterLBData.getDiaryAsLetterboxdListString();
-                console.log(lbList)
-                downloadFile(lbList, "Your List.csv", "text/csv")
-            })
+                console.log(lbList);
+                downloadFile(lbList, "Your List.csv", "text/csv");
+            });
         };
         reader.readAsText(file);
     } else {
