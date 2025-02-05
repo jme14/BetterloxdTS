@@ -155,29 +155,27 @@ const processButton = document.getElementById("processButton");
 const output = document.getElementById("output");
 // Add an event listener to the button
 processButton.addEventListener("click", () => {
-    // Check if a file is selected
-    if (fileInput.files && fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        output.textContent = `Selected file: ${file.name}`;
-        // Read the file content
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            var _a;
-            const fileContent = (_a = event.target) === null || _a === void 0 ? void 0 : _a.result;
-            // console.log("File content:", fileContent);
-            const lbDataPromise = LetterboxdData.initFromString(fileContent);
-            lbDataPromise.then((lbData) => __awaiter(void 0, void 0, void 0, function* () {
-                console.log(lbData);
-                const betterLBData = yield getLetterboxdDataForYearFirstWatches(lbData);
-                const lbList = betterLBData.getDiaryAsLetterboxdListString();
-                console.log(lbList);
-                downloadFile(lbList, "Your List.csv", "text/csv");
-            }));
-        };
-        reader.readAsText(file);
-    }
-    else {
+    // Check if file NOT selected
+    if (!fileInput.files || fileInput.files.length <= 0) {
         output.textContent = "No file selected.";
+        return;
     }
+    const file = fileInput.files[0];
+    // Read the file content
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        var _a;
+        const fileContent = (_a = event.target) === null || _a === void 0 ? void 0 : _a.result;
+        // console.log("File content:", fileContent);
+        const lbDataPromise = LetterboxdData.initFromString(fileContent);
+        lbDataPromise.then((lbData) => __awaiter(void 0, void 0, void 0, function* () {
+            console.log(lbData);
+            const betterLBData = yield getLetterboxdDataForYearFirstWatches(lbData);
+            const lbList = betterLBData.getDiaryAsLetterboxdListString();
+            console.log(lbList);
+            downloadFile(lbList, "Your List.csv", "text/csv");
+        }));
+    };
+    reader.readAsText(file);
 });
 export {};

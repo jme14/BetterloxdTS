@@ -5,11 +5,11 @@ body {
     align-items: center;
     height: 100vh;
     margin: 0;
-    background-color: #f0f0f0;
+    background-color: #2C343F;
 }
 
 .container {
-    background: white;
+    background: #556678;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -20,6 +20,9 @@ input[type="file"] {
     margin-bottom: 20px;
 }
 
+h1,h2,h3,h4,h5,h6,p{
+    color: white;
+}
 button {
     padding: 10px 20px;
     background-color: #007bff;
